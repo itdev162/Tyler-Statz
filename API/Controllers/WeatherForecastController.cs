@@ -1,39 +1,100 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
+using Application.Posts;
+using Domain;
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Logging;
+using System.Linq;
+using Persistence;
 
 namespace API.Controllers
 {
+    [Route("api/[controller]")]
     [ApiController]
-    [Route("[controller]")]
-    public class WeatherForecastController : ControllerBase
+        public class PostsController : ControllerBase
     {
-        private static readonly string[] Summaries = new[]
-        {
-            "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-        };
+        private readonly IMediator mediator;
+        public PostsController(IMediator mediator) => this.mediator = mediator; 
 
-        private readonly ILogger<WeatherForecastController> _logger;
-
-        public WeatherForecastController(ILogger<WeatherForecastController> logger)
+        public async Task<ActionResult<List<Post>>> List() 
         {
-            _logger = logger;
+            return await this.mediator.Send(new List.Query());
+        }
+        /// <summary>
+        /// GET api/posts
+        /// </summary>
+        /// <returns>A list of posts</returns>
+        [HttpGet]
+        public ActionResult<List<Post>> Get()
+        {
+            return this.context.Posts.ToList();
+
         }
 
-        [HttpGet]
-        public IEnumerable<WeatherForecast> Get()
+        /// <summary>
+        /// Get api/posts/[id]
+        /// </summary>
+        /// <param name="id">Post id</param>
+        /// <returns>A single post</returns>
+        [HttpGet("{id}")]
+        public ActionResult<Post> GetById(Guid id)
         {
-            var rng = new Random();
-            return Enumerable.Range(1, 5).Select(index => new WeatherForecast
+            return this.context.Posts.Find(id);
+        }
+         /// <summary>
+        /// POST api/post
+        /// </summary>
+        /// <param name="request">JSON request containing post fields</param>
+        /// <returns>A new post</returns>
+        [HttpPost]
+        public ActionResult<Post> Create([FromBody]Post request)
+        {
+            var post = new Post
             {
-                Date = DateTime.Now.AddDays(index),
-                TemperatureC = rng.Next(-20, 55),
-                Summary = Summaries[rng.Next(Summaries.Length)]
-            })
-            .ToArray();
+                Id = request.Id,
+                Title = request.Title,
+                Body = request.Body,
+                Date = request.Date,
+            };
+
+            context.Posts.Add(post);
+            var success = context.SaveChanges() > 0;
+
+            if (success)
+            {
+                return post;
+            }
+
+            throw new Exception("Error creating post");
+        }
+        /// <summary>
+        /// PUT api/put
+        /// </summary>
+        /// <param name="request">JSON request containing one or more updated post fields</param>
+        /// <returns>An update post</returns>
+        [HttpPut]
+        public ActionResult<Post> Update([FromBody]Post request)
+        {
+            var post = context.Posts.Find(request.Id);
+
+            if (post == null)
+            {
+                throw new Exception("Could not find post");
+            }
+
+            post.Title = request.Title != null ? request.Title : post.Title;
+            post.Body = request.Body != null ? request.Body : post.Body;
+            post.Date = request.Date != null ? request.Date : post.Date;
+
+            var success = context.SaveChanges() > 0;
+
+            if (success)
+            {
+                return post;
+            }
+
+            throw new Exception("Error updating post");
         }
     }
 }
