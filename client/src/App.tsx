@@ -1,9 +1,11 @@
 import React from 'react';
 import axios from 'axios';
-import { BrowserRouter as Router, Switch, Route } from "react-router-dom";
+import { BrowserRouter as Router, Switch, Route, Link } from 'react-router-dom';
 import PostList from './components/PostList/PostList';
 import Post from './components/Post/Post';
 import './App.css';
+import CreatePost from './components/Post/CreatePost';
+import EditPost from './components/Post/EditPost';
 
 class App extends React.Component {
 
@@ -12,9 +14,10 @@ class App extends React.Component {
     post: null
   }
 
-  componentDidMount(){
+  componentDidMount() {
     axios.get('http://localhost:5000/api/posts')
     .then((response) => {
+      console.log(response.data);
       this.setState({
         posts: response.data
       })
@@ -26,13 +29,39 @@ class App extends React.Component {
 
   viewPost = (post) => {
     console.log(`view ${post.title}`);
-    this.setState({ 
-      post: post 
-    });
+    this.setState({
+      post: post,
+    })
   }
 
-  deletePost = post => {
-    axios 
+  editPost = (post) => {
+    this.setState({
+      post: post
+    });
+  };
+
+  onPostCreated = post => {
+    const newPosts = [...this.state.posts, post];
+
+    this.setState({
+      posts: newPosts
+    });
+  };
+
+  onPostUpdated = post => {
+    console.log('updated post: ', post);
+    const newPosts = [...this.state.posts];
+    const index = newPosts.findIndex(p => p.id === post.id);
+
+    newPosts[index] = post;
+
+    this.setState({
+      posts: newPosts
+    });
+  };
+
+  deletePost = (post) => {
+    axios
       .delete(`http://localhost:5000/api/posts/${post.id}`)
       .then(response => {
         const newPosts = this.state.posts.filter(p => p.id !== post.id);
@@ -41,37 +70,49 @@ class App extends React.Component {
         });
       })
       .catch(error => {
-        console.error(`Error deleteing post: ${error}`);
+        console.error(`Error deleting post: ${error}`);
       })
-  };
+  }
 
   render() {
     const { posts, post } = this.state;
- 
+
     return (
-      <Router>
+    <Router>
         <div className="App">
-          <header className="App-Header">
+          <header className="App-header">
             BlogBox
           </header>
-          <main className="App-Content">
+          <nav>
+            <Link to="/">Home</Link>
+            <Link to="/new-post">New Post</Link>
+          </nav>
+          <main className="App-content">
             <Switch>
               <Route exact path="/">
-                <PostList posts={posts} 
-                          clickPost={this.viewPost}
-                          deletePost={this.deletePost}
-                          />
+                <PostList 
+                  posts={posts} 
+                  clickPost={this.viewPost}
+                  deletePost={this.deletePost} 
+                  editPost={this.editPost} 
+                 />
               </Route>
               <Route path="/posts/:postId">
-                <Post post={post}/>
+                <Post post={post} />
+              </Route>
+              <Route path="/new-post">
+                <CreatePost onPostCreated={this.onPostCreated} />
+              </Route>
+              <Route path="/edit-post/:postId">
+                <EditPost post={post} onPostUpdated={this.onPostUpdated} />
               </Route>
             </Switch>
           </main>
         </div>
-      </Router>     
+    </Router>
     );
   }
   
 }
 
-export default App;   
+export default App;
